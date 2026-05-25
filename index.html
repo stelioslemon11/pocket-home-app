@@ -186,12 +186,72 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .oh-leasing { font-size: 12px; color: var(--muted); margin-top: 6px; }
 .status-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
 
-@media (max-width: 600px) {
+/* Active Leasing card */
+.oh-active { border: 2px solid #27AE60 !important; background: linear-gradient(135deg,#f0faf4,#e6f7ec); }
+.al-badge  { display:inline-block; background:#27AE60; color:#fff; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:10px; }
+.al-monthly { font-size:28px; font-weight:800; color:#27AE60; font-family:monospace; line-height:1; }
+.al-monthly span { font-size:13px; font-weight:600; color:var(--muted); }
+.al-meta   { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.7; }
+.al-items  { font-size:13px; color:var(--text); margin-top:8px; line-height:1.7; }
+.btn-success { background:#27AE60; color:#fff; }
+.btn-success:hover { background:#219150; }
+.btn-warn { background:#E67E22; color:#fff; }
+.btn-warn:hover { background:#ca6c1a; }
+.edit-banner { background:var(--blue-light); border:1.5px solid var(--blue); border-radius:10px; padding:12px 16px; margin-bottom:16px; display:none; font-size:13px; font-weight:600; color:var(--blue); display:none; align-items:center; justify-content:space-between; gap:10px; }
+.edit-banner.active { display:flex; }
+
+@media (max-width: 640px) {
+  /* Nav */
+  .topnav { padding: 0 12px; gap: 8px; }
+  .topnav-user { display: none; }
+  /* Admin tabs — horizontal scroll */
+  .admin-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 0; -webkit-overflow-scrolling: touch; }
+  .tab-btn { white-space: nowrap; padding: 10px 14px; font-size: 13px; }
+  .admin-content { padding: 16px 12px; }
+  /* Data table — horizontal scroll */
+  .data-table { font-size: 12px; }
+  .data-table th, .data-table td { padding: 10px 10px; }
+  /* Order view */
+  .order-content { padding: 16px 12px; }
+  .order-title { font-size: 18px; }
+  /* Convert order table rows to flex cards on mobile */
+  .order-tbl thead { display: none; }
+  .order-tbl, .order-tbl tbody { display: block; }
+  .order-tbl tr {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    background: var(--white); border-radius: 10px; border: 1px solid var(--border);
+    margin-bottom: 10px; padding: 10px 12px;
+  }
+  .order-tbl td { display: block; padding: 0; border: none; }
+  .order-tbl td:first-child  { flex: 0 0 auto; }
+  .order-tbl td:nth-child(2) { flex: 1; min-width: 120px; }
+  .order-tbl td:nth-child(3) { flex: 0 0 auto; font-size: 13px; }
+  .order-tbl td:nth-child(4) { flex: 0 0 auto; }
+  .order-tbl td:nth-child(5) { flex: 0 0 100%; text-align: right; font-size: 13px; font-weight: 700; color: var(--blue); }
+  .qty-input { width: 56px; font-size: 16px; }
+  .totals-bar { padding: 12px 14px; }
+  .order-actions { justify-content: stretch; }
+  .order-actions .btn { flex: 1; justify-content: center; }
+  /* Summary */
+  .summary-content { padding: 16px 12px; }
+  .card { padding: 16px 12px; }
+  .info-grid { grid-template-columns: 1fr; }
+  .sum-tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sum-tbl { min-width: 480px; }
   .leasing-cards { grid-template-columns: 1fr; }
-  .result-bar    { flex-direction: column; gap: 16px; }
-  .rright        { text-align: left; }
-  .info-grid     { grid-template-columns: 1fr; }
-  .login-box     { padding: 36px 24px; }
+  .result-bar { flex-direction: column; gap: 16px; }
+  .rright { text-align: left; }
+  .rbig { font-size: 22px; }
+  .summary-actions { flex-direction: column; }
+  .summary-actions .btn { justify-content: center; }
+  /* Order history cards */
+  .oh-card { padding: 12px; }
+  .al-monthly { font-size: 22px; }
+  /* Login */
+  .login-box { padding: 36px 20px; }
+}
+@media (max-width: 400px) {
+  .topnav-logo .brand-name { display: none; }
 }
 @media print {
   .topnav, .summary-actions, .no-print { display: none !important; }
@@ -305,6 +365,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </nav>
 
   <div class="order-content">
+    <div id="edit-banner" class="edit-banner">
+      <span>✏️ Επεξεργασία υπάρχουσας παραγγελίας — αλλάξτε ποσότητες και πατήστε Συνέχεια.</span>
+      <button class="btn btn-outline btn-sm" onclick="cancelEditOrder()">Ακύρωση</button>
+    </div>
     <div class="order-title">Επιλογή Προϊόντων</div>
     <div class="order-sub">Εισάγετε τις ποσότητες που επιθυμείτε και πατήστε Συνέχεια.</div>
     <div id="order-table-container"><div class="loading"><div class="spinner"></div></div></div>
@@ -366,6 +430,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <!-- Order items -->
     <div class="card">
       <div class="card-title">🛍️ Σύνοψη Παραγγελίας</div>
+      <div class="sum-tbl-scroll">
       <table class="sum-tbl">
         <thead>
           <tr>
@@ -378,6 +443,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         </thead>
         <tbody id="sum-tbody"></tbody>
       </table>
+      </div>
       <div style="margin-top:16px;">
         <div class="srow"><span class="slabel">Καθαρή Αξία</span><span class="sval" id="s-net">€0,00</span></div>
         <div class="srow"><span class="slabel">ΦΠΑ 24%</span><span class="sval" id="s-vat">€0,00</span></div>
@@ -557,9 +623,11 @@ const db   = getFirestore(app);
 // ── App state ─────────────────────────────────────
 let currentUser      = null;
 let userRole         = null;
-let products      = [];
-let cart          = {};   // { productId: quantity }
-let pendingImages = [];   // { data: string } — base64 data-URI or URL
+let products          = [];
+let cart              = {};   // { productId: quantity }
+let pendingImages     = [];   // { data: string } — base64 data-URI or URL
+let editingOrderId    = null; // null = new order, string = editing existing order
+let customerOrdersList = [];  // cache for editOrder()
 
 // ── Expose to global (onclick handlers) ──────────
 Object.assign(window, {
@@ -568,6 +636,8 @@ Object.assign(window, {
   openProductModal, closeModal, saveProduct, addImageFiles, addImageUrl, removeImage, editProduct, deleteProduct,
   openCustomerModal, saveCustomer, deleteCustomer,
   loadOrders, loadCustomerOrders,
+  updateOrderStatus, deleteOrder,
+  editOrder, cancelEditOrder,
   goToSummary, pickLeasing, updateLeasing, submitOrder
 });
 
@@ -918,6 +988,7 @@ function renderOrdersAdmin(list) {
     return;
   }
   c.innerHTML = `
+    <div style="overflow-x:auto;">
     <table class="data-table">
       <thead><tr>
         <th>Ημ/νία</th>
@@ -927,6 +998,7 @@ function renderOrdersAdmin(list) {
         <th style="text-align:right">Σύνολο</th>
         <th>Χρηματοδότηση</th>
         <th>Κατάσταση</th>
+        <th>Ενέργειες</th>
       </tr></thead>
       <tbody>${list.map(o => {
         const [statusLabel, statusColor] = ORDER_STATUS[o.status] || ['—','#999'];
@@ -936,6 +1008,8 @@ function renderOrdersAdmin(list) {
         const items = (o.items||[]).map(i => `${esc(i.name)} ×${i.quantity}`).join(', ');
         const leasingLabel = o.leasingType === 'finance' ? 'Χρηματοδοτική'
                            : o.leasingType === 'operating' ? 'Λειτουργική' : '—';
+        const isPending   = o.status === 'pending';
+        const isConfirmed = o.status === 'confirmed';
         return `<tr>
           <td style="white-space:nowrap;font-size:13px;">${date}</td>
           <td>
@@ -943,14 +1017,38 @@ function renderOrdersAdmin(list) {
             <div style="font-size:11px;color:#888;">${esc(o.customerEmail||'')}</div>
           </td>
           <td style="font-size:13px;">${esc(o.company||'—')}</td>
-          <td style="font-size:12px;max-width:220px;word-break:break-word;">${esc(items)}</td>
+          <td style="font-size:12px;max-width:200px;word-break:break-word;">${esc(items)}</td>
           <td style="text-align:right;font-weight:700;font-family:monospace;white-space:nowrap;">${fmtE(o.total||0)}</td>
-          <td style="font-size:12px;">${leasingLabel}<br><span style="color:var(--muted);">${o.leasingMonths||'—'} μήνες · ${fmtE(o.monthlyPayment||0)}/μήνα</span></td>
+          <td style="font-size:12px;">${leasingLabel}<br><span style="color:var(--muted);">${o.leasingMonths||'—'} μήν · ${fmtE(o.monthlyPayment||0)}/μήνα</span></td>
           <td><span class="status-badge" style="background:${statusColor}22;color:${statusColor};">${statusLabel}</span></td>
+          <td style="white-space:nowrap;">
+            ${isPending   ? `<button class="btn btn-success btn-sm" style="margin-bottom:4px;" onclick="updateOrderStatus('${o.id}','confirmed')">✅ Έγκριση</button><br>` : ''}
+            ${!isConfirmed ? `<button class="btn btn-warn btn-sm" style="margin-bottom:4px;" onclick="updateOrderStatus('${o.id}','cancelled')">❌ Απόρριψη</button><br>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="deleteOrder('${o.id}')">🗑️</button>
+          </td>
         </tr>`;
       }).join('')}
       </tbody>
-    </table>`;
+    </table>
+    </div>`;
+}
+
+async function updateOrderStatus(id, status) {
+  try {
+    await updateDoc(doc(db, 'orders', id), { status, updatedAt: new Date() });
+    const msg = status === 'confirmed' ? '✅ Η παραγγελία εγκρίθηκε!' : '❌ Η παραγγελία απορρίφθηκε.';
+    showToast(msg);
+    loadOrders();
+  } catch (e) { alert('Σφάλμα: ' + e.message); }
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Διαγραφή αυτής της παραγγελίας;')) return;
+  try {
+    await deleteDoc(doc(db, 'orders', id));
+    showToast('Η παραγγελία διαγράφηκε.');
+    loadOrders();
+  } catch (e) { alert('Σφάλμα: ' + e.message); }
 }
 
 // ══════════════════════════════════════════════════
@@ -987,19 +1085,37 @@ async function loadCustomerOrders() {
         const tb = b.createdAt?.seconds ?? 0;
         return tb - ta;
       });
+    customerOrdersList = list;
     if (!list.length) { histEl.style.display = 'none'; return; }
     histEl.style.display = 'block';
+
     c.innerHTML = `<div class="order-history-list">${list.map(o => {
       const [statusLabel, statusColor] = ORDER_STATUS[o.status] || ['—','#999'];
       const date = o.createdAt
         ? new Date(o.createdAt.seconds ? o.createdAt.seconds*1000 : o.createdAt)
             .toLocaleDateString('el-GR', { day:'2-digit', month:'long', year:'numeric' })
         : '—';
-      const items = (o.items||[]).map(i =>
+      const itemsHtml = (o.items||[]).map(i =>
         `<span style="font-weight:600;">${esc(i.name)}</span> ×${i.quantity} — ${fmtE(i.total||0)}`
       ).join('<br>');
       const leasingLabel = o.leasingType === 'finance' ? 'Χρηματοδοτική μίσθωση'
                          : o.leasingType === 'operating' ? 'Λειτουργική μίσθωση' : '';
+
+      // ── CONFIRMED → Active Leasing card ──────────────
+      if (o.status === 'confirmed') {
+        return `<div class="oh-card oh-active">
+          <div class="al-badge">⚡ Ενεργό Leasing</div>
+          <div class="al-monthly">${fmtE(o.monthlyPayment||0)}<span> / μήνα</span></div>
+          <div class="al-meta">
+            ${leasingLabel} · ${o.leasingMonths||'—'} μήνες · Σύνολο ${fmtE(o.total||0)}<br>
+            📅 ${date}
+          </div>
+          <div class="al-items">${itemsHtml}</div>
+        </div>`;
+      }
+
+      // ── PENDING → editable card ───────────────────────
+      const isPending = o.status === 'pending';
       return `<div class="oh-card">
         <div class="oh-card-header">
           <div>
@@ -1008,13 +1124,52 @@ async function loadCustomerOrders() {
           </div>
           <div class="oh-total">${fmtE(o.total||0)}</div>
         </div>
-        <div class="oh-items">${items}</div>
+        <div class="oh-items">${itemsHtml}</div>
         ${leasingLabel ? `<div class="oh-leasing">💳 ${leasingLabel} · ${o.leasingMonths||'—'} μήνες · ${fmtE(o.monthlyPayment||0)}/μήνα</div>` : ''}
+        ${isPending ? `<div style="margin-top:10px;">
+          <button class="btn btn-outline btn-sm" onclick="editOrder('${o.id}')">✏️ Επεξεργασία παραγγελίας</button>
+        </div>` : ''}
       </div>`;
     }).join('')}</div>`;
   } catch (e) {
     histEl.style.display = 'none';
   }
+}
+
+function editOrder(orderId) {
+  const o = customerOrdersList.find(x => x.id === orderId);
+  if (!o) return;
+  editingOrderId = orderId;
+  // Reset all qtys
+  products.forEach(p => {
+    const inp = document.getElementById('qty-' + p.id);
+    if (inp) inp.value = 0;
+    cart[p.id] = 0;
+  });
+  // Load items from the saved order
+  (o.items || []).forEach(item => {
+    const inp = document.getElementById('qty-' + item.productId);
+    if (inp) { inp.value = item.quantity; cart[item.productId] = item.quantity; }
+  });
+  recalcOrder();
+  // Show edit banner
+  const banner = document.getElementById('edit-banner');
+  if (banner) banner.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('Επεξεργαστείτε την παραγγελία και πατήστε Συνέχεια.');
+}
+
+function cancelEditOrder() {
+  editingOrderId = null;
+  products.forEach(p => {
+    const inp = document.getElementById('qty-' + p.id);
+    if (inp) inp.value = 0;
+    cart[p.id] = 0;
+  });
+  recalcOrder();
+  const banner = document.getElementById('edit-banner');
+  if (banner) banner.classList.remove('active');
+}
 }
 
 function renderOrderTable(prods) {
@@ -1185,8 +1340,38 @@ async function submitOrder() {
       createdAt: new Date(),
       status: 'pending'
     });
-    showToast('✅ Η παραγγελία καταχωρήθηκε!');
-    btn.textContent = '✅ Καταχωρήθηκε';
+    if (editingOrderId) {
+      await updateDoc(doc(db, 'orders', editingOrderId), {
+        items, total: parseFloat(totalRaw)||0, leasingType,
+        leasingMonths: parseInt(document.getElementById('dur-slider').value),
+        monthlyPayment: parseFloat(monthlyRaw)||0,
+        updatedAt: new Date()
+      });
+      showToast('✅ Η παραγγελία ενημερώθηκε!');
+      btn.textContent = '✅ Ενημερώθηκε';
+      editingOrderId = null;
+      const banner = document.getElementById('edit-banner');
+      if (banner) banner.classList.remove('active');
+    } else {
+      await addDoc(collection(db, 'orders'), {
+        customerId:    currentUser.uid,
+        customerName:  document.getElementById('s-name').value,
+        customerEmail: document.getElementById('s-email').value,
+        company:       document.getElementById('s-company').value,
+        phone:         document.getElementById('s-phone').value,
+        items,
+        total:          parseFloat(totalRaw)   || 0,
+        leasingType,
+        leasingMonths:  parseInt(document.getElementById('dur-slider').value),
+        monthlyPayment: parseFloat(monthlyRaw) || 0,
+        createdAt: new Date(),
+        status: 'pending'
+      });
+      showToast('✅ Η παραγγελία καταχωρήθηκε!');
+      btn.textContent = '✅ Καταχωρήθηκε';
+    }
+    // Refresh history
+    setTimeout(loadCustomerOrders, 800);
   } catch (e) {
     alert('Σφάλμα αποστολής: ' + e.message);
     btn.disabled = false; btn.textContent = '✉️ Αποστολή Παραγγελίας';
