@@ -1065,4 +1065,168 @@ window.recalcOrder = function() {
     cart[p.id] = qty;
   });
   const vat = net * 0.24;
-  doc
+  document.getElementById('ot-net').textContent   = fmtE(net);
+  document.getElementById('ot-vat').textContent   = fmtE(vat);
+  document.getElementById('ot-total').textContent = fmtE(net + vat);
+};
+
+function goToSummary() {
+  if (!products.some(p => (cart[p.id] || 0) > 0)) { showToast('Επιλέξτε τουλάχιστον ένα προϊόν.'); return; }
+  buildSummary();
+  showView('v-summary');
+}
+
+// ══════════════════════════════════════════════════
+// SUMMARY + LEASING
+// ══════════════════════════════════════════════════
+let leasingType = 'finance';
+
+function buildSummary() {
+  const tbody = document.getElementById('sum-tbody');
+  let net = 0;
+  tbody.innerHTML = products
+    .filter(p => (cart[p.id] || 0) > 0)
+    .map(p => {
+      const qty = cart[p.id];
+      const sub = qty * p.price;
+      net += sub;
+      return `<tr>
+        <td>${esc(p.name)}</td>
+        <td style="font-family:monospace;font-size:11px;color:#888">${esc(p.code||'—')}</td>
+        <td style="text-align:right;font-family:monospace">€${Number(p.price).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:700">${qty}</td>
+        <td style="text-align:right" class="stotal">€${sub.toFixed(2)}</td>
+      </tr>`;
+    }).join('');
+  const vat   = net * 0.24;
+  const total = net + vat;
+  document.getElementById('s-net').textContent   = fmtE(net);
+  document.getElementById('s-vat').textContent   = fmtE(vat);
+  document.getElementById('s-total').textContent = fmtE(total);
+  document.getElementById('sum-date').textContent =
+    new Date().toLocaleDateString('el-GR', { day:'2-digit', month:'long', year:'numeric' });
+
+  // Reset leasing UI
+  leasingType = 'finance';
+  document.getElementById('lc-finance').classList.add('active');
+  document.getElementById('lc-operating').classList.remove('active');
+  document.getElementById('dur-slider').value = 12;
+  document.getElementById('result-bar').style.background = 'linear-gradient(135deg,#2222cc,#4455ff)';
+  updateLeasing();
+
+  // Reset submit button
+  const sb = document.getElementById('submit-btn');
+  sb.disabled = false; sb.textContent = '✉️ Αποστολή Παραγγελίας';
+}
+
+function pickLeasing(type) {
+  leasingType = type;
+  ['finance','operating'].forEach(t =>
+    document.getElementById('lc-'+t).classList.toggle('active', t === type));
+  updateLeasing();
+}
+
+function updateLeasing() {
+  const months = parseInt(document.getElementById('dur-slider').value);
+  document.getElementById('dur-val').textContent   = months;
+  document.getElementById('dur-label').textContent = months + ' μήν' + (months===1?'ας':'ες');
+
+  // Parse total from display
+  const raw = document.getElementById('s-total').textContent
+    .replace('€','').replace(/\./g,'').replace(',','.');
+  const baseTotal = parseFloat(raw) || 0;
+  const principal = leasingType === 'finance' ? baseTotal * 1.15 : baseTotal;
+  const bar = document.getElementById('result-bar');
+
+  if (leasingType === 'finance') {
+    bar.style.background = 'linear-gradient(135deg,#2222cc,#4455ff)';
+    document.getElementById('r-mode').textContent = 'Χρηματοδοτική μίσθωση με μεταβίβαση παγίου';
+  } else {
+    bar.style.background = 'linear-gradient(135deg,#b84a00,#e67e22)';
+    document.getElementById('r-mode').textContent = 'Λειτουργική μίσθωση χωρίς μεταβίβαση παγίου';
+  }
+
+  let monthly = 0, totalCost = 0, interest = 0;
+  if (principal > 0) {
+    const r = 0.10 / 12;
+    monthly   = months === 1 ? principal * (1 + r)
+                             : principal * r * Math.pow(1+r,months) / (Math.pow(1+r,months) - 1);
+    totalCost = monthly * months;
+    interest  = totalCost - principal;
+  }
+  document.getElementById('r-monthly').textContent    = fmtE(monthly);
+  document.getElementById('r-total-cost').textContent = fmtE(totalCost);
+  document.getElementById('r-interest').textContent   = 'Τόκοι: ' + fmtE(interest) + '  |  Επιτόκιο 10% ετήσιο';
+}
+
+async function submitOrder() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Αποστολή...';
+  try {
+    const items = products
+      .filter(p => (cart[p.id]||0) > 0)
+      .map(p => ({ productId:p.id, name:p.name, code:p.code||'', price:p.price,
+                   quantity:cart[p.id], total:cart[p.id]*p.price }));
+    const totalRaw = document.getElementById('s-total').textContent
+      .replace('€','').replace(/\./g,'').replace(',','.');
+    const monthlyRaw = document.getElementById('r-monthly').textContent
+      .replace('€','').replace(/\./g,'').replace(',','.');
+    await addDoc(collection(db, 'orders'), {
+      customerId:    currentUser.uid,
+      customerName:  document.getElementById('s-name').value,
+      customerEmail: document.getElementById('s-email').value,
+      company:       document.getElementById('s-company').value,
+      phone:         document.getElementById('s-phone').value,
+      items,
+      total:          parseFloat(totalRaw)   || 0,
+      leasingType,
+      leasingMonths:  parseInt(document.getElementById('dur-slider').value),
+      monthlyPayment: parseFloat(monthlyRaw) || 0,
+      createdAt: new Date(),
+      status: 'pending'
+    });
+    showToast('✅ Η παραγγελία καταχωρήθηκε!');
+    btn.textContent = '✅ Καταχωρήθηκε';
+  } catch (e) {
+    alert('Σφάλμα αποστολής: ' + e.message);
+    btn.disabled = false; btn.textContent = '✉️ Αποστολή Παραγγελίας';
+  }
+}
+
+// ══════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════
+function switchTab(name) {
+  const names = ['products','customers','orders'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)   => b.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', names[i] === name));
+  if (name === 'orders') loadOrders();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(m =>
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function fmtE(n) {
+  return '€' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Enter key on login
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>
