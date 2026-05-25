@@ -174,6 +174,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .toast     { position: fixed; bottom: 24px; right: 24px; background: #1A1A2E; color: white; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(10px); transition: all .3s; z-index: 999; pointer-events: none; }
 .toast.show { opacity: 1; transform: translateY(0); }
 
+/* Customer order history */
+.order-history { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 20px; }
+.order-history-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+.order-history-list { display: flex; flex-direction: column; gap: 12px; }
+.oh-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.oh-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 12px; }
+.oh-meta { font-size: 13px; color: var(--muted); }
+.oh-total { font-size: 16px; font-weight: 800; color: var(--blue); font-family: monospace; white-space: nowrap; }
+.oh-items { font-size: 13px; color: var(--text); line-height: 1.7; }
+.oh-leasing { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.status-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
 @media (max-width: 600px) {
   .leasing-cards { grid-template-columns: 1fr; }
   .result-bar    { flex-direction: column; gap: 16px; }
@@ -246,6 +258,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="admin-tabs">
       <button class="tab-btn active" onclick="switchTab('products')">🛍️ Προϊόντα</button>
       <button class="tab-btn"        onclick="switchTab('customers')">👥 Πελάτες</button>
+      <button class="tab-btn"        onclick="switchTab('orders')">📋 Παραγγελίες</button>
     </div>
 
     <!-- Products tab -->
@@ -264,6 +277,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <button class="btn btn-primary" onclick="openCustomerModal()">+ Νέος Πελάτης</button>
       </div>
       <div id="customers-container"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Orders tab -->
+    <div id="tab-orders" class="tab-panel">
+      <div class="section-header">
+        <div class="section-title">Παραγγελίες</div>
+        <button class="btn btn-outline" onclick="loadOrders()">🔄 Ανανέωση</button>
+      </div>
+      <div id="orders-container"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 </div>
@@ -293,6 +315,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </div>
     <div class="order-actions">
       <button class="btn btn-primary" onclick="goToSummary()" style="padding:12px 28px;font-size:15px;">Συνέχεια →</button>
+    </div>
+
+    <!-- Customer order history -->
+    <div class="order-history" id="customer-history" style="display:none;">
+      <div class="order-history-title">📦 Ιστορικό Παραγγελιών μου</div>
+      <div id="customer-history-container"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 </div>
@@ -517,7 +545,7 @@ import { initializeApp }
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs,
-         addDoc, deleteDoc, updateDoc, query, orderBy }
+         addDoc, deleteDoc, updateDoc, query, orderBy, where }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 // Storage not used — images are referenced by URL
 
@@ -539,6 +567,7 @@ Object.assign(window, {
   switchTab, showView,
   openProductModal, closeModal, saveProduct, addImageFiles, addImageUrl, removeImage, editProduct, deleteProduct,
   openCustomerModal, saveCustomer, deleteCustomer,
+  loadOrders, loadCustomerOrders,
   goToSummary, pickLeasing, updateLeasing, submitOrder
 });
 
@@ -861,6 +890,70 @@ async function deleteCustomer(uid) {
 }
 
 // ══════════════════════════════════════════════════
+// ADMIN — ORDERS
+// ══════════════════════════════════════════════════
+const ORDER_STATUS = {
+  pending:   ['🕐 Σε αναμονή',    '#E67E22'],
+  confirmed: ['✅ Επιβεβαιώθηκε', '#27AE60'],
+  cancelled: ['❌ Ακυρώθηκε',     '#E74C3C'],
+};
+
+async function loadOrders() {
+  const c = document.getElementById('orders-container');
+  if (!c) return;
+  c.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'orders'), orderBy('createdAt', 'desc')));
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderOrdersAdmin(list);
+  } catch (e) {
+    c.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+function renderOrdersAdmin(list) {
+  const c = document.getElementById('orders-container');
+  if (!list.length) {
+    c.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><p>Δεν υπάρχουν παραγγελίες ακόμα.</p></div>';
+    return;
+  }
+  c.innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>Ημ/νία</th>
+        <th>Πελάτης</th>
+        <th>Εταιρεία</th>
+        <th>Προϊόντα</th>
+        <th style="text-align:right">Σύνολο</th>
+        <th>Χρηματοδότηση</th>
+        <th>Κατάσταση</th>
+      </tr></thead>
+      <tbody>${list.map(o => {
+        const [statusLabel, statusColor] = ORDER_STATUS[o.status] || ['—','#999'];
+        const date = o.createdAt
+          ? new Date(o.createdAt.seconds ? o.createdAt.seconds*1000 : o.createdAt).toLocaleDateString('el-GR')
+          : '—';
+        const items = (o.items||[]).map(i => `${esc(i.name)} ×${i.quantity}`).join(', ');
+        const leasingLabel = o.leasingType === 'finance' ? 'Χρηματοδοτική'
+                           : o.leasingType === 'operating' ? 'Λειτουργική' : '—';
+        return `<tr>
+          <td style="white-space:nowrap;font-size:13px;">${date}</td>
+          <td>
+            <div style="font-weight:700;">${esc(o.customerName||o.customerEmail||'—')}</div>
+            <div style="font-size:11px;color:#888;">${esc(o.customerEmail||'')}</div>
+          </td>
+          <td style="font-size:13px;">${esc(o.company||'—')}</td>
+          <td style="font-size:12px;max-width:220px;word-break:break-word;">${esc(items)}</td>
+          <td style="text-align:right;font-weight:700;font-family:monospace;white-space:nowrap;">${fmtE(o.total||0)}</td>
+          <td style="font-size:12px;">${leasingLabel}<br><span style="color:var(--muted);">${o.leasingMonths||'—'} μήνες · ${fmtE(o.monthlyPayment||0)}/μήνα</span></td>
+          <td><span class="status-badge" style="background:${statusColor}22;color:${statusColor};">${statusLabel}</span></td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ══════════════════════════════════════════════════
 // CUSTOMER — ORDER
 // ══════════════════════════════════════════════════
 async function loadOrderProducts() {
@@ -872,6 +965,55 @@ async function loadOrderProducts() {
     renderOrderTable(products);
   } catch (e) {
     c.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+  // Load order history alongside products
+  loadCustomerOrders();
+}
+
+async function loadCustomerOrders() {
+  if (!currentUser) return;
+  const histEl = document.getElementById('customer-history');
+  const c      = document.getElementById('customer-history-container');
+  if (!histEl || !c) return;
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'orders'),
+      where('customerId', '==', currentUser.uid)
+    ));
+    const list = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const ta = a.createdAt?.seconds ?? 0;
+        const tb = b.createdAt?.seconds ?? 0;
+        return tb - ta;
+      });
+    if (!list.length) { histEl.style.display = 'none'; return; }
+    histEl.style.display = 'block';
+    c.innerHTML = `<div class="order-history-list">${list.map(o => {
+      const [statusLabel, statusColor] = ORDER_STATUS[o.status] || ['—','#999'];
+      const date = o.createdAt
+        ? new Date(o.createdAt.seconds ? o.createdAt.seconds*1000 : o.createdAt)
+            .toLocaleDateString('el-GR', { day:'2-digit', month:'long', year:'numeric' })
+        : '—';
+      const items = (o.items||[]).map(i =>
+        `<span style="font-weight:600;">${esc(i.name)}</span> ×${i.quantity} — ${fmtE(i.total||0)}`
+      ).join('<br>');
+      const leasingLabel = o.leasingType === 'finance' ? 'Χρηματοδοτική μίσθωση'
+                         : o.leasingType === 'operating' ? 'Λειτουργική μίσθωση' : '';
+      return `<div class="oh-card">
+        <div class="oh-card-header">
+          <div>
+            <div class="oh-meta">${date}</div>
+            <span class="status-badge" style="background:${statusColor}22;color:${statusColor};margin-top:4px;display:inline-block;">${statusLabel}</span>
+          </div>
+          <div class="oh-total">${fmtE(o.total||0)}</div>
+        </div>
+        <div class="oh-items">${items}</div>
+        ${leasingLabel ? `<div class="oh-leasing">💳 ${leasingLabel} · ${o.leasingMonths||'—'} μήνες · ${fmtE(o.monthlyPayment||0)}/μήνα</div>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+  } catch (e) {
+    histEl.style.display = 'none';
   }
 }
 
@@ -923,167 +1065,4 @@ window.recalcOrder = function() {
     cart[p.id] = qty;
   });
   const vat = net * 0.24;
-  document.getElementById('ot-net').textContent   = fmtE(net);
-  document.getElementById('ot-vat').textContent   = fmtE(vat);
-  document.getElementById('ot-total').textContent = fmtE(net + vat);
-};
-
-function goToSummary() {
-  if (!products.some(p => (cart[p.id] || 0) > 0)) { showToast('Επιλέξτε τουλάχιστον ένα προϊόν.'); return; }
-  buildSummary();
-  showView('v-summary');
-}
-
-// ══════════════════════════════════════════════════
-// SUMMARY + LEASING
-// ══════════════════════════════════════════════════
-let leasingType = 'finance';
-
-function buildSummary() {
-  const tbody = document.getElementById('sum-tbody');
-  let net = 0;
-  tbody.innerHTML = products
-    .filter(p => (cart[p.id] || 0) > 0)
-    .map(p => {
-      const qty = cart[p.id];
-      const sub = qty * p.price;
-      net += sub;
-      return `<tr>
-        <td>${esc(p.name)}</td>
-        <td style="font-family:monospace;font-size:11px;color:#888">${esc(p.code||'—')}</td>
-        <td style="text-align:right;font-family:monospace">€${Number(p.price).toFixed(2)}</td>
-        <td style="text-align:center;font-weight:700">${qty}</td>
-        <td style="text-align:right" class="stotal">€${sub.toFixed(2)}</td>
-      </tr>`;
-    }).join('');
-  const vat   = net * 0.24;
-  const total = net + vat;
-  document.getElementById('s-net').textContent   = fmtE(net);
-  document.getElementById('s-vat').textContent   = fmtE(vat);
-  document.getElementById('s-total').textContent = fmtE(total);
-  document.getElementById('sum-date').textContent =
-    new Date().toLocaleDateString('el-GR', { day:'2-digit', month:'long', year:'numeric' });
-
-  // Reset leasing UI
-  leasingType = 'finance';
-  document.getElementById('lc-finance').classList.add('active');
-  document.getElementById('lc-operating').classList.remove('active');
-  document.getElementById('dur-slider').value = 12;
-  document.getElementById('result-bar').style.background = 'linear-gradient(135deg,#2222cc,#4455ff)';
-  updateLeasing();
-
-  // Reset submit button
-  const sb = document.getElementById('submit-btn');
-  sb.disabled = false; sb.textContent = '✉️ Αποστολή Παραγγελίας';
-}
-
-function pickLeasing(type) {
-  leasingType = type;
-  ['finance','operating'].forEach(t =>
-    document.getElementById('lc-'+t).classList.toggle('active', t === type));
-  updateLeasing();
-}
-
-function updateLeasing() {
-  const months = parseInt(document.getElementById('dur-slider').value);
-  document.getElementById('dur-val').textContent   = months;
-  document.getElementById('dur-label').textContent = months + ' μήν' + (months===1?'ας':'ες');
-
-  // Parse total from display
-  const raw = document.getElementById('s-total').textContent
-    .replace('€','').replace(/\./g,'').replace(',','.');
-  const baseTotal = parseFloat(raw) || 0;
-  const principal = leasingType === 'finance' ? baseTotal * 1.15 : baseTotal;
-  const bar = document.getElementById('result-bar');
-
-  if (leasingType === 'finance') {
-    bar.style.background = 'linear-gradient(135deg,#2222cc,#4455ff)';
-    document.getElementById('r-mode').textContent = 'Χρηματοδοτική μίσθωση με μεταβίβαση παγίου';
-  } else {
-    bar.style.background = 'linear-gradient(135deg,#b84a00,#e67e22)';
-    document.getElementById('r-mode').textContent = 'Λειτουργική μίσθωση χωρίς μεταβίβαση παγίου';
-  }
-
-  let monthly = 0, totalCost = 0, interest = 0;
-  if (principal > 0) {
-    const r = 0.10 / 12;
-    monthly   = months === 1 ? principal * (1 + r)
-                             : principal * r * Math.pow(1+r,months) / (Math.pow(1+r,months) - 1);
-    totalCost = monthly * months;
-    interest  = totalCost - principal;
-  }
-  document.getElementById('r-monthly').textContent    = fmtE(monthly);
-  document.getElementById('r-total-cost').textContent = fmtE(totalCost);
-  document.getElementById('r-interest').textContent   = 'Τόκοι: ' + fmtE(interest) + '  |  Επιτόκιο 10% ετήσιο';
-}
-
-async function submitOrder() {
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true; btn.textContent = 'Αποστολή...';
-  try {
-    const items = products
-      .filter(p => (cart[p.id]||0) > 0)
-      .map(p => ({ productId:p.id, name:p.name, code:p.code||'', price:p.price,
-                   quantity:cart[p.id], total:cart[p.id]*p.price }));
-    const totalRaw = document.getElementById('s-total').textContent
-      .replace('€','').replace(/\./g,'').replace(',','.');
-    const monthlyRaw = document.getElementById('r-monthly').textContent
-      .replace('€','').replace(/\./g,'').replace(',','.');
-    await addDoc(collection(db, 'orders'), {
-      customerId:    currentUser.uid,
-      customerName:  document.getElementById('s-name').value,
-      customerEmail: document.getElementById('s-email').value,
-      company:       document.getElementById('s-company').value,
-      phone:         document.getElementById('s-phone').value,
-      items,
-      total:          parseFloat(totalRaw)   || 0,
-      leasingType,
-      leasingMonths:  parseInt(document.getElementById('dur-slider').value),
-      monthlyPayment: parseFloat(monthlyRaw) || 0,
-      createdAt: new Date(),
-      status: 'pending'
-    });
-    showToast('✅ Η παραγγελία καταχωρήθηκε!');
-    btn.textContent = '✅ Καταχωρήθηκε';
-  } catch (e) {
-    alert('Σφάλμα αποστολής: ' + e.message);
-    btn.disabled = false; btn.textContent = '✉️ Αποστολή Παραγγελίας';
-  }
-}
-
-// ══════════════════════════════════════════════════
-// UTILITIES
-// ══════════════════════════════════════════════════
-function switchTab(name) {
-  const names = ['products','customers'];
-  document.querySelectorAll('.tab-btn').forEach((b,i)   => b.classList.toggle('active', names[i] === name));
-  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', names[i] === name));
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-document.querySelectorAll('.modal-overlay').forEach(m =>
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-function fmtE(n) {
-  return '€' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// Enter key on login
-document.getElementById('login-pass').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
-</script>
-</body>
-</html>
+  doc
