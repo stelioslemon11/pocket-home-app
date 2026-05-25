@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pocket Home</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:       #3535EC;
+  --blue-dark:  #2525CC;
+  --blue-light: #EEEEFF;
+  --text:       #111;
+  --muted:      #666;
+  --border:     #E0E0E0;
+  --card-bg:    #F8F8FC;
+  --white:      #FFF;
+  --danger:     #E53E3E;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F5F8; color: var(--text); min-height: 100vh; }
+
+/* ── View management ── */
+.view { display: none; min-height: 100vh; }
+.view.active { display: block; }
+#v-login.active { display: flex; }
+
+/* ── Buttons ── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all .15s; text-decoration: none; }
+.btn-primary  { background: var(--blue); color: #fff; }
+.btn-primary:hover  { background: var(--blue-dark); }
+.btn-outline  { background: transparent; color: var(--blue); border: 1.5px solid var(--blue); }
+.btn-outline:hover  { background: var(--blue-light); }
+.btn-danger   { background: var(--danger); color: #fff; }
+.btn-danger:hover   { background: #c53030; }
+.btn-sm  { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Form ── */
+.form-group  { margin-bottom: 16px; }
+.form-label  { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; }
+.form-input  { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color .15s; background: #fff; }
+.form-input:focus { border-color: var(--blue); }
+.form-hint   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ════ LOGIN ════ */
+#v-login { align-items: center; justify-content: center; background: var(--white); }
+.login-box { width: 400px; max-width: 90vw; padding: 48px 40px; text-align: center; }
+.login-logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 32px; }
+.brand-name  { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.3px; }
+.login-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.login-sub   { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+.login-btn   { width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; margin-top: 4px; justify-content: center; }
+.login-error { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 20px; }
+
+/* ════ TOP NAV ════ */
+.topnav { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+.topnav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.topnav-logo .brand-name { font-size: 18px; }
+.topnav-spacer { flex: 1; }
+.topnav-user { font-size: 13px; color: var(--muted); }
+
+/* ════ ADMIN ════ */
+.admin-content { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+.tab-btn { padding: 10px 20px; background: none; border: none; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+.tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.section-title  { font-size: 18px; font-weight: 700; }
+
+/* Product grid */
+.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.product-card  { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+.product-card img  { width: 100%; height: 160px; object-fit: cover; }
+.product-card .no-img { width: 100%; height: 160px; background: var(--card-bg); display: flex; align-items: center; justify-content: center; font-size: 36px; color: #ccc; }
+.pc-body   { padding: 14px; }
+.pc-name   { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.pc-code   { font-size: 11px; color: var(--muted); font-family: monospace; margin-bottom: 4px; }
+.pc-desc   { font-size: 12px; color: #555; margin-bottom: 8px; line-height: 1.4; }
+.pc-price  { font-size: 16px; font-weight: 800; color: var(--blue); margin-bottom: 10px; }
+.pc-actions{ display: flex; gap: 8px; }
+
+/* Customers table */
+.data-table { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.data-table th { background: var(--card-bg); padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.data-table td { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 14px; }
+.data-table tr:hover td { background: var(--blue-light); }
+
+/* ════ MODALS ════ */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-box   { background: var(--white); border-radius: 16px; padding: 28px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.modal-footer{ display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; color: var(--muted); font-size: 13px; transition: all .15s; }
+.upload-zone:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.upload-preview { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-top: 10px; }
+
+/* ════ ORDER ════ */
+.order-content { max-width: 1000px; margin: 0 auto; padding: 24px 20px; }
+.order-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.order-sub   { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+.order-tbl   { width: 100%; border-collapse: collapse; background: var(--white); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 20px; }
+.order-tbl th { background: var(--card-bg); padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+.order-tbl td { padding: 12px 14px; border-top: 1px solid var(--border); vertical-align: middle; }
+.prod-img    { width: 52px; height: 42px; object-fit: cover; border-radius: 6px; }
+.no-img-sm   { width: 52px; height: 42px; background: var(--card-bg); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; color: #ccc; }
+.qty-input   { width: 64px; padding: 6px 8px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 14px; font-weight: 700; text-align: center; }
+.qty-input:focus { border-color: var(--blue); outline: none; }
+.row-total   { font-weight: 800; color: #2222CC; font-family: monospace; }
+
+/* Totals bar */
+.totals-bar  { background: var(--white); border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 20px; }
+.totals-row  { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.totals-row:last-child { border-bottom: none; font-size: 16px; font-weight: 800; }
+.totals-label{ color: var(--muted); }
+.totals-val  { font-weight: 700; font-family: monospace; }
+.totals-val.big { font-size: 18px; color: var(--blue); }
+.order-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+
+/* ════ SUMMARY ════ */
+.summary-content { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+.card       { background: var(--white); border-radius: 14px; border: 1px solid var(--border); padding: 24px; margin-bottom: 20px; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--blue); margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+.sum-tbl    { width: 100%; border-collapse: collapse; }
+.sum-tbl th { background: var(--card-bg); padding: 10px 12px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); }
+.sum-tbl td { padding: 10px 12px; border-top: 1px solid var(--border); font-size: 13px; }
+.stotal     { font-weight: 800; font-family: monospace; color: #2222CC; }
+.srow       { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.srow:last-child { border-bottom: none; }
+.slabel     { color: var(--muted); }
+.sval       { font-family: monospace; font-weight: 800; }
+.info-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+
+/* Leasing */
+.leasing-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.lcard      { border: 2px solid var(--border); border-radius: 12px; padding: 16px; cursor: pointer; transition: all .15s; }
+.lcard:hover { border-color: var(--blue); }
+.lcard.active { border-color: var(--blue); background: var(--blue-light); }
+.lcard h3   { font-size: 14px; font-weight: 700; margin: 8px 0 4px; }
+.lcard p    { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.lbadge     { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.lbadge.blue   { background: var(--blue); color: white; }
+.lbadge.orange { background: #E67E22; color: white; }
+.duration-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.duration-row input[type=range] { flex: 1; accent-color: var(--blue); }
+.dur-bubble { background: var(--blue); color: white; border-radius: 20px; padding: 4px 10px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.result-bar { background: linear-gradient(135deg,#2222CC,#4455FF); border-radius: 12px; padding: 20px 24px; color: white; display: flex; justify-content: space-between; align-items: flex-start; margin-top: 16px; }
+.rlabel     { font-size: 12px; opacity: .85; margin-bottom: 4px; }
+.rbig       { font-size: 28px; font-weight: 800; font-family: monospace; }
+.rsub       { font-size: 12px; opacity: .75; margin-top: 4px; }
+.rright     { text-align: right; }
+.rmed       { font-size: 20px; font-weight: 700; font-family: monospace; }
+.rate-note  { font-size: 11.5px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+.summary-actions { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
+
+/* Utilities */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-state .es-icon { font-size: 48px; margin-bottom: 12px; }
+.loading   { display: flex; align-items: center; justify-content: center; min-height: 200px; }
+.spinner   { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast     { position: fixed; bottom: 24px; right: 24px; background: #1A1A2E; color: white; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(10px); transition: all .3s; z-index: 999; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 600px) {
+  .leasing-cards { grid-template-columns: 1fr; }
+  .result-bar    { flex-direction: column; gap: 16px; }
+  .rright        { text-align: left; }
+  .info-grid     { grid-template-columns: 1fr; }
+  .login-box     { padding: 36px 24px; }
+}
+@media print {
+  .topnav, .summary-actions, .no-print { display: none !important; }
+  .card { border: 1px solid #ddd; break-inside: avoid; }
+  body  { background: white; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW: LOGIN
+══════════════════════════════════════════════════ -->
+<div id="v-login" class="view active">
+  <div class="login-box">
+    <div class="login-logo">
+      <!-- Pocket Home logo SVG -->
+      <svg width="52" height="52" viewBox="0 0 50 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M25 3 L48 20 L48 50 Q48 52 46 52 L4 52 Q2 52 2 50 L2 20 Z" fill="#3535EC"/>
+        <path fill="white" fill-rule="evenodd" d="
+          M13 50 L13 23 L27 23
+          C34.5 23 39.5 27.5 39.5 32.5
+          C39.5 37.5 34.5 42 27 42
+          L20 42 L20 50 Z
+          M20 28 L27 28
+          C31.5 28 34.5 30 34.5 32.5
+          C34.5 35 31.5 37 27 37
+          L20 37 Z
+        "/>
+      </svg>
+      <span class="brand-name">Pocket Home</span>
+    </div>
+    <div class="login-title">Καλωσήρθατε</div>
+    <div class="login-sub">Συνδεθείτε για να συνεχίσετε</div>
+    <div class="form-group" style="text-align:left;">
+      <label class="form-label">Email</label>
+      <input type="email" id="login-email" class="form-input" placeholder="email@example.com" autocomplete="email">
+    </div>
+    <div class="form-group" style="text-align:left;">
+      <label class="form-label">Κωδικός</label>
+      <input type="password" id="login-pass" class="form-input" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary login-btn" id="login-btn" onclick="doLogin()">Σύνδεση</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW: ADMIN
+══════════════════════════════════════════════════ -->
+<div id="v-admin" class="view">
+  <nav class="topnav">
+    <div class="topnav-logo">
+      <svg width="32" height="32" viewBox="0 0 50 52" fill="none"><path d="M25 3 L48 20 L48 50 Q48 52 46 52 L4 52 Q2 52 2 50 L2 20 Z" fill="#3535EC"/><path fill="white" fill-rule="evenodd" d="M13 50 L13 23 L27 23 C34.5 23 39.5 27.5 39.5 32.5 C39.5 37.5 34.5 42 27 42 L20 42 L20 50 Z M20 28 L27 28 C31.5 28 34.5 30 34.5 32.5 C34.5 35 31.5 37 27 37 L20 37 Z"/></svg>
+      <span class="brand-name">Pocket Home</span>
+    </div>
+    <span style="font-size:12px;background:#FFF3CD;color:#856404;padding:4px 10px;border-radius:20px;font-weight:700;">Admin</span>
+    <div class="topnav-spacer"></div>
+    <span class="topnav-user" id="admin-user-name"></span>
+    <button class="btn btn-outline btn-sm" onclick="doLogout()">Αποσύνδεση</button>
+  </nav>
+
+  <div class="admin-content">
+    <div class="admin-tabs">
+      <button class="tab-btn active" onclick="switchTab('products')">🛍️ Προϊόντα</button>
+      <button class="tab-btn"        onclick="switchTab('customers')">👥 Πελάτες</button>
+    </div>
+
+    <!-- Products tab -->
+    <div id="tab-products" class="tab-panel active">
+      <div class="section-header">
+        <div class="section-title">Διαχείριση Προϊόντων</div>
+        <button class="btn btn-primary" onclick="openProductModal()">+ Προσθήκη Προϊόντος</button>
+      </div>
+      <div id="products-container"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Customers tab -->
+    <div id="tab-customers" class="tab-panel">
+      <div class="section-header">
+        <div class="section-title">Πελάτες</div>
+        <button class="btn btn-primary" onclick="openCustomerModal()">+ Νέος Πελάτης</button>
+      </div>
+      <div id="customers-container"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW: ORDER (Customer)
+══════════════════════════════════════════════════ -->
+<div id="v-order" class="view">
+  <nav class="topnav">
+    <div class="topnav-logo">
+      <svg width="32" height="32" viewBox="0 0 50 52" fill="none"><path d="M25 3 L48 20 L48 50 Q48 52 46 52 L4 52 Q2 52 2 50 L2 20 Z" fill="#3535EC"/><path fill="white" fill-rule="evenodd" d="M13 50 L13 23 L27 23 C34.5 23 39.5 27.5 39.5 32.5 C39.5 37.5 34.5 42 27 42 L20 42 L20 50 Z M20 28 L27 28 C31.5 28 34.5 30 34.5 32.5 C34.5 35 31.5 37 27 37 L20 37 Z"/></svg>
+      <span class="brand-name">Pocket Home</span>
+    </div>
+    <div class="topnav-spacer"></div>
+    <span class="topnav-user" id="order-user-name"></span>
+    <button class="btn btn-outline btn-sm" onclick="doLogout()">Αποσύνδεση</button>
+  </nav>
+
+  <div class="order-content">
+    <div class="order-title">Επιλογή Προϊόντων</div>
+    <div class="order-sub">Εισάγετε τις ποσότητες που επιθυμείτε και πατήστε Συνέχεια.</div>
+    <div id="order-table-container"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="totals-bar" id="order-totals" style="display:none;">
+      <div class="totals-row"><span class="totals-label">Καθαρή Αξία</span><span class="totals-val" id="ot-net">€0,00</span></div>
+      <div class="totals-row"><span class="totals-label">ΦΠΑ 24%</span><span class="totals-val" id="ot-vat">€0,00</span></div>
+      <div class="totals-row"><span class="totals-label">Σύνολο (με ΦΠΑ)</span><span class="totals-val big" id="ot-total">€0,00</span></div>
+    </div>
+    <div class="order-actions">
+      <button class="btn btn-primary" onclick="goToSummary()" style="padding:12px 28px;font-size:15px;">Συνέχεια →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW: SUMMARY
+══════════════════════════════════════════════════ -->
+<div id="v-summary" class="view">
+  <nav class="topnav no-print">
+    <div class="topnav-logo">
+      <svg width="32" height="32" viewBox="0 0 50 52" fill="none"><path d="M25 3 L48 20 L48 50 Q48 52 46 52 L4 52 Q2 52 2 50 L2 20 Z" fill="#3535EC"/><path fill="white" fill-rule="evenodd" d="M13 50 L13 23 L27 23 C34.5 23 39.5 27.5 39.5 32.5 C39.5 37.5 34.5 42 27 42 L20 42 L20 50 Z M20 28 L27 28 C31.5 28 34.5 30 34.5 32.5 C34.5 35 31.5 37 27 37 L20 37 Z"/></svg>
+      <span class="brand-name">Pocket Home</span>
+    </div>
+    <div class="topnav-spacer"></div>
+    <button class="btn btn-outline btn-sm" onclick="showView('v-order')">← Πίσω</button>
+    <button class="btn btn-outline btn-sm" onclick="doLogout()">Αποσύνδεση</button>
+  </nav>
+
+  <div class="summary-content">
+    <!-- Customer info -->
+    <div class="card">
+      <div class="card-title">📋 Στοιχεία Παραγγελίας</div>
+      <div class="info-grid">
+        <div class="form-group">
+          <label class="form-label">Ονοματεπώνυμο</label>
+          <input type="text"  id="s-name"    class="form-input" placeholder="π.χ. Γιώργος Παπαδόπουλος">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Εταιρεία</label>
+          <input type="text"  id="s-company" class="form-input" placeholder="π.χ. ABC ΕΠΕ">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Τηλέφωνο</label>
+          <input type="tel"   id="s-phone"   class="form-input" placeholder="π.χ. 210 1234567">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="s-email"   class="form-input" placeholder="email@example.com">
+        </div>
+      </div>
+    </div>
+
+    <!-- Order items -->
+    <div class="card">
+      <div class="card-title">🛍️ Σύνοψη Παραγγελίας</div>
+      <table class="sum-tbl">
+        <thead>
+          <tr>
+            <th>Προϊόν</th>
+            <th>Κωδικός</th>
+            <th style="text-align:right">Τιμή</th>
+            <th style="text-align:center">Ποσ.</th>
+            <th style="text-align:right">Σύνολο</th>
+          </tr>
+        </thead>
+        <tbody id="sum-tbody"></tbody>
+      </table>
+      <div style="margin-top:16px;">
+        <div class="srow"><span class="slabel">Καθαρή Αξία</span><span class="sval" id="s-net">€0,00</span></div>
+        <div class="srow"><span class="slabel">ΦΠΑ 24%</span><span class="sval" id="s-vat">€0,00</span></div>
+        <div class="srow">
+          <span class="slabel" style="font-size:15px;font-weight:800;color:var(--text);">Σύνολο (με ΦΠΑ)</span>
+          <span class="sval" id="s-total" style="font-size:15px;color:var(--blue);">€0,00</span>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;">
+        Χρόνος παράδοσης: ~4 εβδομάδες &nbsp;|&nbsp;
+        <span style="color:#27ae60;font-weight:700;">Μεταφορά &amp; Εγκατάσταση: Δωρεάν</span>
+        &nbsp;|&nbsp; Εγγύηση: 5 έτη &nbsp;|&nbsp; Ισχύς προσφοράς: 30 ημέρες
+        &nbsp;|&nbsp; Ημ/νία: <span id="sum-date"></span>
+      </div>
+    </div>
+
+    <!-- Leasing -->
+    <div class="card">
+      <div class="card-title">💳 Σενάρια Χρηματοδότησης</div>
+      <div class="leasing-cards">
+        <div class="lcard active" id="lc-finance" onclick="pickLeasing('finance')">
+          <span class="lbadge blue">Χρηματοδοτική</span>
+          <h3>Leasing με Μεταβίβαση</h3>
+          <p>Το πάγιο μεταβιβάζεται στον μισθωτή στη λήξη. Εγγράφεται στα βιβλία ως πάγιο, αποσβένεται κανονικά.</p>
+        </div>
+        <div class="lcard" id="lc-operating" onclick="pickLeasing('operating')">
+          <span class="lbadge orange">Λειτουργική</span>
+          <h3>Leasing Χωρίς Μεταβίβαση</h3>
+          <p>Το πάγιο παραμένει στη μισθώτρια εταιρεία. Πλήρης έκπτωση δόσεων ως λειτουργικό κόστος.</p>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:14px;font-weight:700;color:#333;">
+          Διάρκεια χρηματοδότησης: <span id="dur-label" style="color:var(--blue);">12 μήνες</span>
+        </label>
+        <div class="duration-row">
+          <span style="font-size:12px;color:#999">1 μήνας</span>
+          <input type="range" id="dur-slider" min="1" max="24" value="12" oninput="updateLeasing()">
+          <span style="font-size:12px;color:#999">24 μήνες</span>
+          <div class="dur-bubble"><span id="dur-val">12</span>μ</div>
+        </div>
+      </div>
+      <div class="result-bar" id="result-bar">
+        <div>
+          <div class="rlabel" id="r-mode">Χρηματοδοτική μίσθωση με μεταβίβαση παγίου</div>
+          <div class="rbig" id="r-monthly">€0,00</div>
+          <div class="rsub">μηνιαία δόση (με ΦΠΑ)</div>
+        </div>
+        <div class="rright">
+          <div class="rlabel">Συνολικό κόστος χρηματοδότησης</div>
+          <div class="rmed" id="r-total-cost">€0,00</div>
+          <div class="rsub" id="r-interest">Τόκοι: €0,00 &nbsp;|&nbsp; Επιτόκιο 10% ετήσιο</div>
+        </div>
+      </div>
+      <div class="rate-note">
+        * Το επιτόκιο 10% είναι ενδεικτικό. Οι δόσεις υπολογίζονται με τη μέθοδο ισόποσης αποπληρωμής (annuity).
+        Η τελική έγκριση εξαρτάται από τη χρηματοδοτική εταιρεία. Το χρηματοδοτούμενο ποσό περιλαμβάνει ΦΠΑ.
+      </div>
+    </div>
+
+    <div class="summary-actions no-print">
+      <button class="btn btn-outline"  onclick="window.print()">🖨️ Εκτύπωση</button>
+      <button class="btn btn-primary"  id="submit-btn" onclick="submitOrder()">✉️ Αποστολή Παραγγελίας</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: ADD / EDIT PRODUCT
+══════════════════════════════════════════════════ -->
+<div id="m-product" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-product-title">Προσθήκη Προϊόντος</div>
+    <div class="form-group">
+      <label class="form-label">Όνομα Προϊόντος *</label>
+      <input type="text"   id="p-name"  class="form-input" placeholder="π.χ. Γραφείο NEO 140cm">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Κωδικός Προϊόντος</label>
+      <input type="text"   id="p-code"  class="form-input" placeholder="π.χ. 634-072-607">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Περιγραφή</label>
+      <input type="text"   id="p-desc"  class="form-input" placeholder="π.χ. Διαστάσεις, υλικό...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Τιμή (€) *</label>
+      <input type="number" id="p-price" class="form-input" placeholder="π.χ. 440.00" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL Εικόνας</label>
+      <input type="url" id="p-img-url" class="form-input" placeholder="https://... (σύνδεσμος εικόνας)" oninput="previewImageUrl(this.value)">
+      <div class="form-hint">Ανεβάστε την εικόνα στο Google Photos / Imgur και επικολλήστε τον σύνδεσμο εδώ.</div>
+      <img id="upload-preview" class="upload-preview" style="display:none;margin-top:10px;" alt="preview">
+    </div>
+    <input type="hidden" id="p-edit-id" value="">
+    <div class="modal-footer">
+      <button class="btn btn-outline"  onclick="closeModal('m-product')">Άκυρο</button>
+      <button class="btn btn-primary"  id="save-product-btn" onclick="saveProduct()">Αποθήκευση</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: CREATE CUSTOMER
+══════════════════════════════════════════════════ -->
+<div id="m-customer" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">Δημιουργία Νέου Πελάτη</div>
+    <div class="form-group">
+      <label class="form-label">Ονοματεπώνυμο *</label>
+      <input type="text"     id="c-name"  class="form-input" placeholder="π.χ. Μαρία Κωνσταντίνου">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email *</label>
+      <input type="email"    id="c-email" class="form-input" placeholder="pelatis@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Κωδικός *</label>
+      <input type="password" id="c-pass"  class="form-input" placeholder="Τουλάχιστον 6 χαρακτήρες">
+      <div class="form-hint">Δώστε αυτόν τον κωδικό στον πελάτη σας.</div>
+    </div>
+    <div id="customer-error" style="color:var(--danger);font-size:13px;min-height:20px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('m-customer')">Άκυρο</button>
+      <button class="btn btn-primary" id="save-customer-btn" onclick="saveCustomer()">Δημιουργία</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════
+     FIREBASE + APP LOGIC
+══════════════════════════════════════════════════ -->
+<script type="module">
+// ╔══════════════════════════════════════════════╗
+// ║  FIREBASE CONFIG — αντικαταστήστε με τα δικά σας ║
+// ╚══════════════════════════════════════════════╝
+const firebaseConfig = {
+  apiKey:            "AIzaSyDJbySpBVjelBYZBDBGrw88vDtr-0AJ5ww",
+  authDomain:        "pocket-home-5af0c.firebaseapp.com",
+  projectId:         "pocket-home-5af0c",
+  storageBucket:     "pocket-home-5af0c.firebasestorage.app",
+  messagingSenderId: "110525492615",
+  appId:             "1:110525492615:web:7a1eb4865eb789d4d63722",
+  measurementId:     "G-CGQYKKFK9K"
+};
+
+// ── Firebase SDK ──────────────────────────────────
+import { initializeApp }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs,
+         addDoc, deleteDoc, updateDoc, query, orderBy }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+// Storage not used — images are referenced by URL
+
+// ── Init ──────────────────────────────────────────
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── App state ─────────────────────────────────────
+let currentUser      = null;
+let userRole         = null;
+let products = [];
+let cart     = {};   // { productId: quantity }
+
+// ── Expose to global (onclick handlers) ──────────
+Object.assign(window, {
+  doLogin, doLogout,
+  switchTab, showView,
+  openProductModal, closeModal, saveProduct, previewImage, editProduct, deleteProduct,
+  openCustomerModal, saveCustomer, deleteCustomer,
+  goToSummary, pickLeasing, updateLeasing, submitOrder
+});
+
+// ══════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    currentUser = user;
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (!snap.exists()) {
+        showToast('Δεν βρέθηκε προφίλ. Επικοινωνήστε με τον διαχειριστή.');
+        await signOut(auth); return;
+      }
+      const data = snap.data();
+      userRole = data.role;
+      const name = data.name || user.email;
+
+      if (userRole === 'admin') {
+        document.getElementById('admin-user-name').textContent = name;
+        showView('v-admin');
+        loadProducts();
+        loadCustomers();
+      } else {
+        document.getElementById('order-user-name').textContent = name;
+        document.getElementById('s-name').value  = name;
+        document.getElementById('s-email').value = user.email;
+        showView('v-order');
+        loadOrderProducts();
+      }
+    } catch (e) {
+      showToast('Σφάλμα: ' + e.message);
+      await signOut(auth);
+    }
+  } else {
+    currentUser = null; userRole = null; cart = {};
+    showView('v-login');
+    document.getElementById('login-btn').disabled = false;
+    document.getElementById('login-btn').textContent = 'Σύνδεση';
+  }
+});
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'Συμπληρώστε email και κωδικό.'; return; }
+  btn.disabled = true; btn.textContent = 'Σύνδεση...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    const map = {
+      'auth/invalid-credential':    'Λάθος email ή κωδικός.',
+      'auth/user-not-found':        'Δεν βρέθηκε ο χρήστης.',
+      'auth/wrong-password':        'Λάθος κωδικός.',
+      'auth/too-many-requests':     'Πολλές αποτυχημένες προσπάθειες. Δοκιμάστε αργότερα.',
+      'auth/invalid-email':         'Μη έγκυρη μορφή email.',
+      'auth/network-request-failed':'Πρόβλημα δικτύου.',
+    };
+    err.textContent = map[e.code] || 'Αποτυχία σύνδεσης.';
+    btn.disabled = false; btn.textContent = 'Σύνδεση';
+  }
+}
+
+async function doLogout() {
+  cart = {};
+  await signOut(auth);
+}
+
+// ── View routing ──────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════
+// ADMIN — PRODUCTS
+// ══════════════════════════════════════════════════
+async function loadProducts() {
+  const c = document.getElementById('products-container');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'products'), orderBy('createdAt', 'desc')));
+    products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderProductsAdmin(products);
+  } catch (e) {
+    c.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+function renderProductsAdmin(prods) {
+  const c = document.getElementById('products-container');
+  if (!prods.length) {
+    c.innerHTML = '<div class="empty-state"><div class="es-icon">🛍️</div><p>Δεν υπάρχουν προϊόντα ακόμα.<br>Πατήστε "+ Προσθήκη Προϊόντος" για να ξεκινήσετε.</p></div>';
+    return;
+  }
+  c.innerHTML = `<div class="products-grid">${prods.map(p => `
+    <div class="product-card">
+      ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${esc(p.name)}" loading="lazy">` : '<div class="no-img">📦</div>'}
+      <div class="pc-body">
+        <div class="pc-name">${esc(p.name)}</div>
+        ${p.code        ? `<div class="pc-code">${esc(p.code)}</div>`        : ''}
+        ${p.description ? `<div class="pc-desc">${esc(p.description)}</div>` : ''}
+        <div class="pc-price">€${Number(p.price).toFixed(2)}</div>
+        <div class="pc-actions">
+          <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')">✏️ Επεξεργασία</button>
+          <button class="btn btn-danger  btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function openProductModal(editId = '') {
+  ['p-name','p-code','p-desc','p-price','p-edit-id','p-img-url'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('modal-product-title').textContent = editId ? 'Επεξεργασία Προϊόντος' : 'Προσθήκη Προϊόντος';
+  document.getElementById('upload-preview').style.display = 'none';
+  document.getElementById('p-edit-id').value = editId;
+  document.getElementById('m-product').classList.add('open');
+}
+
+function editProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  openProductModal(id);
+  document.getElementById('p-name').value  = p.name;
+  document.getElementById('p-code').value  = p.code        || '';
+  document.getElementById('p-desc').value  = p.description || '';
+  document.getElementById('p-price').value = p.price;
+  document.getElementById('p-img-url').value = p.imageUrl || '';
+  if (p.imageUrl) {
+    const prev = document.getElementById('upload-preview');
+    prev.src = p.imageUrl; prev.style.display = 'block';
+  }
+}
+
+function previewImageUrl(url) {
+  const prev = document.getElementById('upload-preview');
+  if (url && url.startsWith('http')) {
+    prev.src = url; prev.style.display = 'block';
+    prev.onerror = () => { prev.style.display = 'none'; };
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
+async function saveProduct() {
+  const name  = document.getElementById('p-name').value.trim();
+  const code  = document.getElementById('p-code').value.trim();
+  const desc  = document.getElementById('p-desc').value.trim();
+  const price = parseFloat(document.getElementById('p-price').value);
+  const editId= document.getElementById('p-edit-id').value;
+  if (!name)        { alert('Συμπληρώστε το όνομα προϊόντος.'); return; }
+  if (isNaN(price)) { alert('Συμπληρώστε έγκυρη τιμή.'); return; }
+
+  const btn = document.getElementById('save-product-btn');
+  btn.disabled = true; btn.textContent = 'Αποθήκευση...';
+  try {
+    const imageUrl = document.getElementById('p-img-url').value.trim();
+    const data = { name, code, description: desc, price, imageUrl, updatedAt: new Date() };
+    if (editId) {
+      await updateDoc(doc(db, 'products', editId), data);
+    } else {
+      data.createdAt = new Date();
+      await addDoc(collection(db, 'products'), data);
+    }
+    closeModal('m-product');
+    showToast(editId ? 'Το προϊόν ενημερώθηκε.' : 'Το προϊόν προστέθηκε.');
+    await loadProducts();
+  } catch (e) {
+    alert('Σφάλμα: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Αποθήκευση';
+  }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Διαγραφή αυτού του προϊόντος;')) return;
+  try {
+    await deleteDoc(doc(db, 'products', id));
+    showToast('Το προϊόν διαγράφηκε.');
+    await loadProducts();
+  } catch (e) { alert('Σφάλμα: ' + e.message); }
+}
+
+// ══════════════════════════════════════════════════
+// ADMIN — CUSTOMERS
+// ══════════════════════════════════════════════════
+async function loadCustomers() {
+  const c = document.getElementById('customers-container');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.role === 'customer');
+    renderCustomers(list);
+  } catch (e) {
+    c.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+function renderCustomers(list) {
+  const c = document.getElementById('customers-container');
+  if (!list.length) {
+    c.innerHTML = '<div class="empty-state"><div class="es-icon">👥</div><p>Δεν υπάρχουν πελάτες ακόμα.<br>Πατήστε "+ Νέος Πελάτης" για να δημιουργήσετε.</p></div>';
+    return;
+  }
+  c.innerHTML = `
+    <table class="data-table">
+      <thead><tr><th>Ονοματεπώνυμο</th><th>Email</th><th>Εγγραφή</th><th></th></tr></thead>
+      <tbody>${list.map(u => `
+        <tr>
+          <td><strong>${esc(u.name || '—')}</strong></td>
+          <td>${esc(u.email)}</td>
+          <td>${u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds*1000 : u.createdAt).toLocaleDateString('el-GR') : '—'}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteCustomer('${u.id}')">Διαγραφή</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function openCustomerModal() {
+  ['c-name','c-email','c-pass'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('customer-error').textContent = '';
+  document.getElementById('m-customer').classList.add('open');
+}
+
+async function saveCustomer() {
+  const name  = document.getElementById('c-name').value.trim();
+  const email = document.getElementById('c-email').value.trim();
+  const pass  = document.getElementById('c-pass').value;
+  const errEl = document.getElementById('customer-error');
+  errEl.textContent = '';
+  if (!name)        { errEl.textContent = 'Συμπληρώστε το ονοματεπώνυμο.'; return; }
+  if (!email)       { errEl.textContent = 'Συμπληρώστε το email.'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Ο κωδικός χρειάζεται τουλάχιστον 6 χαρακτήρες.'; return; }
+
+  const btn = document.getElementById('save-customer-btn');
+  btn.disabled = true; btn.textContent = 'Δημιουργία...';
+  try {
+    // Use REST API so admin session is not interrupted
+    const res  = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
+      { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password: pass, returnSecureToken: true }) }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    await setDoc(doc(db, 'users', data.localId), {
+      name, email, role: 'customer', createdAt: new Date()
+    });
+    closeModal('m-customer');
+    showToast(`Ο πελάτης "${name}" δημιουργήθηκε.`);
+    await loadCustomers();
+  } catch (e) {
+    const map = {
+      'EMAIL_EXISTS': 'Αυτό το email χρησιμοποιείται ήδη.',
+      'INVALID_EMAIL':'Μη έγκυρη μορφή email.',
+    };
+    errEl.textContent = map[e.message] || ('Σφάλμα: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Δημιουργία';
+  }
+}
+
+async function deleteCustomer(uid) {
+  if (!confirm('Διαγραφή πελάτη από τη λίστα;\n\nΣημείωση: ο λογαριασμός Firebase Auth παραμένει ενεργός — για πλήρη διαγραφή πηγαίνετε Firebase Console → Authentication.')) return;
+  try {
+    await deleteDoc(doc(db, 'users', uid));
+    showToast('Ο πελάτης αφαιρέθηκε από τη λίστα.');
+    await loadCustomers();
+  } catch (e) { alert('Σφάλμα: ' + e.message); }
+}
+
+// ══════════════════════════════════════════════════
+// CUSTOMER — ORDER
+// ══════════════════════════════════════════════════
+async function loadOrderProducts() {
+  const c = document.getElementById('order-table-container');
+  c.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'products'), orderBy('createdAt', 'asc')));
+    products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderOrderTable(products);
+  } catch (e) {
+    c.innerHTML = `<div class="empty-state"><div class="es-icon">⚠️</div><p>${e.message}</p></div>`;
+  }
+}
+
+function renderOrderTable(prods) {
+  const c = document.getElementById('order-table-container');
+  document.getElementById('order-totals').style.display = prods.length ? 'block' : 'none';
+  if (!prods.length) {
+    c.innerHTML = '<div class="empty-state"><div class="es-icon">🛍️</div><p>Δεν υπάρχουν διαθέσιμα προϊόντα ακόμα.</p></div>';
+    return;
+  }
+  c.innerHTML = `
+    <table class="order-tbl">
+      <thead><tr>
+        <th style="width:64px"></th>
+        <th>Προϊόν</th>
+        <th style="text-align:right">Τιμή</th>
+        <th style="text-align:center;width:96px">Ποσότητα</th>
+        <th style="text-align:right">Σύνολο</th>
+      </tr></thead>
+      <tbody>${prods.map(p => `
+        <tr>
+          <td>${p.imageUrl
+            ? `<img class="prod-img" src="${p.imageUrl}" alt="${esc(p.name)}" loading="lazy">`
+            : '<div class="no-img-sm">📦</div>'}</td>
+          <td>
+            <div style="font-weight:700;font-size:14px;">${esc(p.name)}</div>
+            ${p.code        ? `<div style="font-size:11px;color:#888;font-family:monospace;margin-top:2px;">${esc(p.code)}</div>` : ''}
+            ${p.description ? `<div style="font-size:12px;color:#666;margin-top:2px;">${esc(p.description)}</div>` : ''}
+          </td>
+          <td style="text-align:right;font-weight:700;font-family:monospace;">€${Number(p.price).toFixed(2)}</td>
+          <td style="text-align:center;">
+            <input type="number" class="qty-input" id="qty-${p.id}" value="0" min="0" max="999" oninput="recalcOrder()">
+          </td>
+          <td style="text-align:right;" class="row-total" id="rt-${p.id}">€0,00</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  recalcOrder();
+}
+
+window.recalcOrder = function() {
+  let net = 0;
+  products.forEach(p => {
+    const qty = Math.max(0, parseInt(document.getElementById('qty-' + p.id)?.value || 0) || 0);
+    const sub = qty * p.price;
+    const el  = document.getElementById('rt-' + p.id);
+    if (el) el.textContent = fmtE(sub);
+    net += sub;
+    cart[p.id] = qty;
+  });
+  const vat = net * 0.24;
+  document.getElementById('ot-net').textContent   = fmtE(net);
+  document.getElementById('ot-vat').textContent   = fmtE(vat);
+  document.getElementById('ot-total').textContent = fmtE(net + vat);
+};
+
+function goToSummary() {
+  if (!products.some(p => (cart[p.id] || 0) > 0)) { showToast('Επιλέξτε τουλάχιστον ένα προϊόν.'); return; }
+  buildSummary();
+  showView('v-summary');
+}
+
+// ══════════════════════════════════════════════════
+// SUMMARY + LEASING
+// ══════════════════════════════════════════════════
+let leasingType = 'finance';
+
+function buildSummary() {
+  const tbody = document.getElementById('sum-tbody');
+  let net = 0;
+  tbody.innerHTML = products
+    .filter(p => (cart[p.id] || 0) > 0)
+    .map(p => {
+      const qty = cart[p.id];
+      const sub = qty * p.price;
+      net += sub;
+      return `<tr>
+        <td>${esc(p.name)}</td>
+        <td style="font-family:monospace;font-size:11px;color:#888">${esc(p.code||'—')}</td>
+        <td style="text-align:right;font-family:monospace">€${Number(p.price).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:700">${qty}</td>
+        <td style="text-align:right" class="stotal">€${sub.toFixed(2)}</td>
+      </tr>`;
+    }).join('');
+  const vat   = net * 0.24;
+  const total = net + vat;
+  document.getElementById('s-net').textContent   = fmtE(net);
+  document.getElementById('s-vat').textContent   = fmtE(vat);
+  document.getElementById('s-total').textContent = fmtE(total);
+  document.getElementById('sum-date').textContent =
+    new Date().toLocaleDateString('el-GR', { day:'2-digit', month:'long', year:'numeric' });
+
+  // Reset leasing UI
+  leasingType = 'finance';
+  document.getElementById('lc-finance').classList.add('active');
+  document.getElementById('lc-operating').classList.remove('active');
+  document.getElementById('dur-slider').value = 12;
+  document.getElementById('result-bar').style.background = 'linear-gradient(135deg,#2222cc,#4455ff)';
+  updateLeasing();
+
+  // Reset submit button
+  const sb = document.getElementById('submit-btn');
+  sb.disabled = false; sb.textContent = '✉️ Αποστολή Παραγγελίας';
+}
+
+function pickLeasing(type) {
+  leasingType = type;
+  ['finance','operating'].forEach(t =>
+    document.getElementById('lc-'+t).classList.toggle('active', t === type));
+  updateLeasing();
+}
+
+function updateLeasing() {
+  const months = parseInt(document.getElementById('dur-slider').value);
+  document.getElementById('dur-val').textContent   = months;
+  document.getElementById('dur-label').textContent = months + ' μήν' + (months===1?'ας':'ες');
+
+  // Parse total from display
+  const raw = document.getElementById('s-total').textContent
+    .replace('€','').replace(/\./g,'').replace(',','.');
+  const baseTotal = parseFloat(raw) || 0;
+  const principal = leasingType === 'finance' ? baseTotal * 1.15 : baseTotal;
+  const bar = document.getElementById('result-bar');
+
+  if (leasingType === 'finance') {
+    bar.style.background = 'linear-gradient(135deg,#2222cc,#4455ff)';
+    document.getElementById('r-mode').textContent = 'Χρηματοδοτική μίσθωση με μεταβίβαση παγίου';
+  } else {
+    bar.style.background = 'linear-gradient(135deg,#b84a00,#e67e22)';
+    document.getElementById('r-mode').textContent = 'Λειτουργική μίσθωση χωρίς μεταβίβαση παγίου';
+  }
+
+  let monthly = 0, totalCost = 0, interest = 0;
+  if (principal > 0) {
+    const r = 0.10 / 12;
+    monthly   = months === 1 ? principal * (1 + r)
+                             : principal * r * Math.pow(1+r,months) / (Math.pow(1+r,months) - 1);
+    totalCost = monthly * months;
+    interest  = totalCost - principal;
+  }
+  document.getElementById('r-monthly').textContent    = fmtE(monthly);
+  document.getElementById('r-total-cost').textContent = fmtE(totalCost);
+  document.getElementById('r-interest').textContent   = 'Τόκοι: ' + fmtE(interest) + '  |  Επιτόκιο 10% ετήσιο';
+}
+
+async function submitOrder() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Αποστολή...';
+  try {
+    const items = products
+      .filter(p => (cart[p.id]||0) > 0)
+      .map(p => ({ productId:p.id, name:p.name, code:p.code||'', price:p.price,
+                   quantity:cart[p.id], total:cart[p.id]*p.price }));
+    const totalRaw = document.getElementById('s-total').textContent
+      .replace('€','').replace(/\./g,'').replace(',','.');
+    const monthlyRaw = document.getElementById('r-monthly').textContent
+      .replace('€','').replace(/\./g,'').replace(',','.');
+    await addDoc(collection(db, 'orders'), {
+      customerId:    currentUser.uid,
+      customerName:  document.getElementById('s-name').value,
+      customerEmail: document.getElementById('s-email').value,
+      company:       document.getElementById('s-company').value,
+      phone:         document.getElementById('s-phone').value,
+      items,
+      total:          parseFloat(totalRaw)   || 0,
+      leasingType,
+      leasingMonths:  parseInt(document.getElementById('dur-slider').value),
+      monthlyPayment: parseFloat(monthlyRaw) || 0,
+      createdAt: new Date(),
+      status: 'pending'
+    });
+    showToast('✅ Η παραγγελία καταχωρήθηκε!');
+    btn.textContent = '✅ Καταχωρήθηκε';
+  } catch (e) {
+    alert('Σφάλμα αποστολής: ' + e.message);
+    btn.disabled = false; btn.textContent = '✉️ Αποστολή Παραγγελίας';
+  }
+}
+
+// ══════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════
+function switchTab(name) {
+  const names = ['products','customers'];
+  document.querySelectorAll('.tab-btn').forEach((b,i)   => b.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', names[i] === name));
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  pendingImageFile = null;
+}
+document.querySelectorAll('.modal-overlay').forEach(m =>
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function fmtE(n) {
+  return '€' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Enter key on login
+document.getElementById('login-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>
